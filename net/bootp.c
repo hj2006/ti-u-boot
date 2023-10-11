@@ -143,6 +143,7 @@ static int check_reply_packet(uchar *pkt, unsigned dest, unsigned src,
 
 static void store_bootp_params(struct bootp_hdr *bp)
 {
+#if !defined(CONFIG_BOOTP_SERVERIP)
 	struct in_addr tmp_ip;
 	bool overwrite_serverip = true;
 
@@ -176,12 +177,13 @@ static void store_bootp_params(struct bootp_hdr *bp)
 	 */
 	if (*net_boot_file_name)
 		env_set("bootfile", net_boot_file_name);
+#endif
 }
-
 /*
  * Copy parameters of interest from BOOTP_REPLY/DHCP_OFFER packet
  */
-static void store_net_params(struct bootp_hdr *bp)
+
+static void store_bootp_params(struct bootp_hdr *bp)
 {
 #if !defined(CONFIG_SERVERIP_FROM_PROXYDHCP)
 	store_bootp_params(bp);
@@ -1080,6 +1082,12 @@ static void dhcp_handler(uchar *pkt, unsigned dest, struct in_addr sip,
 			if (CONFIG_IS_ENABLED(EFI_LOADER) &&
 			    IS_ENABLED(CONFIG_NETDEVICES))
 				efi_net_set_dhcp_ack(pkt, len);
+
+#if defined(CONFIG_SERVERIP_FROM_PROXYDHCP)
+			if (!net_server_ip.s_addr)
+				udelay(CONFIG_SERVERIP_FROM_PROXYDHCP_DELAY_MS *
+					1000);
+#endif	/* CONFIG_SERVERIP_FROM_PROXYDHCP */
 
 #if defined(CONFIG_SERVERIP_FROM_PROXYDHCP)
 			if (!net_server_ip.s_addr)
